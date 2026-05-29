@@ -260,7 +260,7 @@ function classifyMedia(media) {
 }
 
 // ── 상태 ─────────────────────────────────────────────────────────────────────
-let allData = SAMPLE;
+let allData = [];
 let currentTab = 'ours';
 let oursPage = 1, othersPage = 1;
 let oursSort = {col:'발행일시',asc:false}, othersSort = {col:'발행일시',asc:false};
@@ -268,9 +268,93 @@ let selectedHosp = null; // null = 전체 타병원
 let barChart = null, pieChart = null;
 
 // ── 초기화 ───────────────────────────────────────────────────────────────────
-function init() {
-  allData = SAMPLE;
-  document.getElementById('total-badge').textContent = `총 ${allData.length}건`;
+async function init() {
+  try {
+
+    const response = await fetch('./big5_news_data.json');
+
+    if (!response.ok) {
+      throw new Error('JSON 로딩 실패');
+    }
+
+    const jsonData = await response.json();
+
+    allData = jsonData.map(item => {
+
+      let hospitalGroup = '';
+
+      if (
+        item.keyword.includes('서울아산병원') ||
+        item.keyword.includes('아산병원')
+      ) {
+        hospitalGroup = '아산';
+      }
+
+      else if (
+        item.keyword.includes('삼성서울병원')
+      ) {
+        hospitalGroup = '삼성';
+      }
+
+      else if (
+        item.keyword.includes('세브란스')
+      ) {
+        hospitalGroup = '세브란스';
+      }
+
+      else if (
+        item.keyword.includes('서울대병원')
+      ) {
+        hospitalGroup = '서울대';
+      }
+
+      else if (
+        item.keyword.includes('서울성모병원')
+      ) {
+        hospitalGroup = '성모';
+      }
+
+      return {
+        날짜: item.pubDate
+          ? new Date(item.pubDate).toISOString().slice(0,10)
+          : '',
+
+        병원그룹: hospitalGroup,
+
+        검색어: item.keyword || '',
+
+        매체: '',
+
+        제목: item.title || '',
+
+        요약: item.description || '',
+
+        네이버링크: item.link || '',
+
+        언론사원문: item.originallink || '',
+
+        발행일시: item.pubDate || '',
+
+        수집일시: item.collected_at || ''
+      };
+
+    });
+
+    document.getElementById('last-updated').textContent =
+      `실제 수집 데이터 ${allData.length}건`;
+
+  } catch(error) {
+
+    console.error(error);
+
+    alert('big5_news_data.json 로딩 실패');
+
+    allData = SAMPLE;
+  }
+
+  document.getElementById('total-badge').textContent =
+    `총 ${allData.length}건`;
+
   buildHospFilter();
   updateKeywordOptions('ours');
   renderOurs();
